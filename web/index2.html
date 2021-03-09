@@ -1,0 +1,149 @@
+<html>
+
+<head>
+    <title>dajdg</title>
+    <script>
+        const EventTypeInit = 1
+        const EventTypeConnect = 2
+        const EventTypeGameStarted = 3
+        const EventTypeYouTurn = 4
+        const EventTypeNotYouTurn = 5
+        const EventTypeStep = 6
+        const EventTypeFieldUpdate = 7
+
+        let playerMark = undefined;
+        let conn;
+
+        document.addEventListener("DOMContentLoaded", ready);
+
+        function ready() {
+            document.querySelectorAll('.game-cell').forEach(item => {
+                item.addEventListener('click', clickHandler)
+            })
+
+            if (window["WebSocket"]) {
+                conn = new WebSocket("ws://" + document.location.host + "/ws");
+                conn.onclose = function (evt) {
+                    console.log('Connection closed.');
+                };
+                conn.onmessage = function (evt) {
+                    //var messages = evt.data.split('\n');
+                    let e = JSON.parse(evt.data);
+                    handleEvent(e);
+                };
+            } else {
+                var item = document.createElement("div");
+                item.innerHTML = "<b>Your browser does not support WebSockets.</b>";
+                appendLog(item);
+            }
+        }
+
+        function handleEvent(e) {
+            switch (e.Type) {
+                case EventTypeInit:
+                    playerMark = e.Data.Label;
+                    console.log('You mark is ' + playerMark);
+                    document.title = 'Player Mark is ' + playerMark;
+                    break;
+                case EventTypeGameStarted:
+                    if (e.Data.IsFirstPlayer) {
+                        console.log('You are first');
+                    } else {
+                        console.log('You are second');
+                    }
+                    break;
+                case EventTypeNotYouTurn:
+                    console.log('ISNT-You TURNNN!!!!');
+                    break;
+                case EventTypeFieldUpdate:
+                    let field = e.Data.Field;
+                    for (let i = 0; i < field.length; i++) {
+                        for (let j = 0; j < field[i].length; j++) {
+                            let id = `cell_${i}_${j}`;
+                            let cell = document.getElementById(id)
+                            cell.innerHTML = field[i][j];
+                            console.log(field[i][j]);
+                        }
+                    }
+                    console.log(e.Data);
+                    break;
+            }
+            console.log()
+        }
+
+        const clickHandler = function (event) {
+            let cell = event.currentTarget;
+
+            let rowId = cell.getAttribute('data-row-id');
+            let collId = cell.getAttribute('data-coll-id');
+
+            let click = {
+                "Type": EventTypeStep,
+                "Data": {
+                    "Row": parseInt(rowId),
+                    "Coll": parseInt(collId),
+                }
+            }
+
+            conn.send(JSON.stringify(click));
+
+            /*
+            let btn = event.currentTarget;
+            let id = btn.getAttribute('data-row-id');
+            let tr = document.getElementById(id);
+            let uri = btn.getAttribute('data-uri');
+
+            let thenCB = function (json) {
+                let data = JSON.parse(json);
+
+                if (data.hasOwnProperty('message')) {
+                    notifyError(data.message);
+                } else {
+                    tr.remove();
+                }
+            };
+
+            doAjaxRequestPlain(
+                btn.getAttribute('id'),
+                uri,
+                thenCB,
+            );
+            */
+        }
+
+
+    </script>
+
+    <style>
+        .winCondition {
+            background-color: cadetblue;
+        }
+    </style>
+
+</head>
+<body>
+
+<table>
+    <tr>
+        <td class="game-cell" id="cell_0_0" data-row-id="0" data-coll-id="0">_</td>
+        <td class="game-cell" id="cell_0_1" data-row-id="0" data-coll-id="1">_</td>
+        <td class="game-cell" id="cell_0_2" data-row-id="0" data-coll-id="2">_</td>
+    </tr>
+    <tr>
+        <td class="game-cell" id="cell_1_0" data-row-id="1" data-coll-id="0">_</td>
+        <td class="game-cell" id="cell_1_1" data-row-id="1" data-coll-id="1">_</td>
+        <td class="game-cell" id="cell_1_2" data-row-id="1" data-coll-id="2">_</td>
+    </tr>
+    <tr>
+        <td class="game-cell" id="cell_2_0" data-row-id="2" data-coll-id="0">_</td>
+        <td class="game-cell" id="cell_2_1" data-row-id="2" data-coll-id="1">_</td>
+        <td class="game-cell" id="cell_2_2" data-row-id="2" data-coll-id="2">_</td>
+    </tr>
+</table>
+
+<form id="formOneMoreTime" style="display: none;">
+    <input type="submit" value="One more time">
+</form>
+
+</body>
+</html>
