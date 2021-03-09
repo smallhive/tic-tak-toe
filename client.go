@@ -106,11 +106,11 @@ func (c *Client) writePump() {
 			w.Write(message)
 
 			// Add queued chat messages to the current websocket message.
-			n := len(c.send)
-			for i := 0; i < n; i++ {
-				w.Write(newline)
-				w.Write(<-c.send)
-			}
+			// n := len(c.send)
+			// for i := 0; i < n; i++ {
+			// 	w.Write(newline)
+			// 	w.Write(<-c.send)
+			// }
 
 			if err := w.Close(); err != nil {
 				return
@@ -136,11 +136,7 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	client.hub.register <- client
 	p := hub.World().AddPlayer(client)
 
-	e := &Event{
-		Type: EventTypeInit,
-		Data: &EventInit{Label: p.Label},
-	}
-
+	e := NewEventInit(p.Label)
 	conn.WriteJSON(e)
 
 	// Allow collection of memory referenced by the caller by doing all work in

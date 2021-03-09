@@ -54,3 +54,9 @@ func (h *Hub) run() {
 		}
 	}
 }
+
+func (h *Hub) DisconnectAll() {
+	for c, _ := range h.clients {
+		h.unregister <- c
+	}
+}

@@ -1,7 +1,7 @@
 <html>
 
 <head>
-    <title>dajdg</title>
+    <title>Tic-tak-toe</title>
     <script>
         const EventTypeInit = 1
         const EventTypeConnect = 2
@@ -10,6 +10,8 @@
         const EventTypeNotYouTurn = 5
         const EventTypeStep = 6
         const EventTypeFieldUpdate = 7
+        const EventTypeGameEnded = 8
+        const EventTypeGameFailed = 9
 
         let playerMark = undefined;
         let conn;
@@ -39,11 +41,17 @@
         }
 
         function handleEvent(e) {
+            let turnNotificationCell = document.getElementById('turnNotification');
+            let gameResult = document.getElementById('gameResult');
+
             switch (e.Type) {
                 case EventTypeInit:
                     playerMark = e.Data.Label;
                     console.log('You mark is ' + playerMark);
                     document.title = 'Player Mark is ' + playerMark;
+
+                    let playerMarkCell = document.getElementById('playerMark');
+                    playerMarkCell.innerHTML = playerMark;
                     break;
                 case EventTypeGameStarted:
                     if (e.Data.IsFirstPlayer) {
@@ -52,23 +60,39 @@
                         console.log('You are second');
                     }
                     break;
+                case EventTypeYouTurn:
+                    turnNotificationCell.innerHTML = 'You turn';
+                    break;
                 case EventTypeNotYouTurn:
-                    console.log('ISNT-You TURNNN!!!!');
+                    turnNotificationCell.innerHTML = 'Oponent turn';
                     break;
                 case EventTypeFieldUpdate:
                     let field = e.Data.Field;
                     for (let i = 0; i < field.length; i++) {
                         for (let j = 0; j < field[i].length; j++) {
                             let id = `cell_${i}_${j}`;
-                            let cell = document.getElementById(id)
+                            let cell = document.getElementById(id);
                             cell.innerHTML = field[i][j];
-                            console.log(field[i][j]);
+                            // console.log(field[i][j]);
                         }
                     }
-                    console.log(e.Data);
+                    // console.log(e.Data);
                     break;
+                case EventTypeGameEnded:
+                    if (e.Data.IsWin) {
+                        document.title = 'Congrats! You are winner!';
+                    } else {
+                        document.title = 'My sorry! You are lose!';
+                    }
+
+                    gameResult.innerHTML = document.title;
+                    break
+                case EventTypeGameFailed:
+                    document.title = 'No winners! Reconnect to attempt one more time ;)';
+                    gameResult.innerHTML = document.title;
+                    // alert('No winners! Reconnect to attempt one more time ;)')
+                    break
             }
-            console.log()
         }
 
         const clickHandler = function (event) {
@@ -86,29 +110,6 @@
             }
 
             conn.send(JSON.stringify(click));
-
-            /*
-            let btn = event.currentTarget;
-            let id = btn.getAttribute('data-row-id');
-            let tr = document.getElementById(id);
-            let uri = btn.getAttribute('data-uri');
-
-            let thenCB = function (json) {
-                let data = JSON.parse(json);
-
-                if (data.hasOwnProperty('message')) {
-                    notifyError(data.message);
-                } else {
-                    tr.remove();
-                }
-            };
-
-            doAjaxRequestPlain(
-                btn.getAttribute('id'),
-                uri,
-                thenCB,
-            );
-            */
         }
 
 
@@ -123,23 +124,37 @@
 </head>
 <body>
 
-<table>
-    <tr>
-        <td class="game-cell" id="cell_0_0" data-row-id="0" data-coll-id="0">_</td>
-        <td class="game-cell" id="cell_0_1" data-row-id="0" data-coll-id="1">_</td>
-        <td class="game-cell" id="cell_0_2" data-row-id="0" data-coll-id="2">_</td>
-    </tr>
-    <tr>
-        <td class="game-cell" id="cell_1_0" data-row-id="1" data-coll-id="0">_</td>
-        <td class="game-cell" id="cell_1_1" data-row-id="1" data-coll-id="1">_</td>
-        <td class="game-cell" id="cell_1_2" data-row-id="1" data-coll-id="2">_</td>
-    </tr>
-    <tr>
-        <td class="game-cell" id="cell_2_0" data-row-id="2" data-coll-id="0">_</td>
-        <td class="game-cell" id="cell_2_1" data-row-id="2" data-coll-id="1">_</td>
-        <td class="game-cell" id="cell_2_2" data-row-id="2" data-coll-id="2">_</td>
-    </tr>
-</table>
+<div style="margin: auto">
+    <table>
+        <tr>
+            <td class="game-cell" id="cell_0_0" data-row-id="0" data-coll-id="0">_</td>
+            <td class="game-cell" id="cell_0_1" data-row-id="0" data-coll-id="1">_</td>
+            <td class="game-cell" id="cell_0_2" data-row-id="0" data-coll-id="2">_</td>
+        </tr>
+        <tr>
+            <td class="game-cell" id="cell_1_0" data-row-id="1" data-coll-id="0">_</td>
+            <td class="game-cell" id="cell_1_1" data-row-id="1" data-coll-id="1">_</td>
+            <td class="game-cell" id="cell_1_2" data-row-id="1" data-coll-id="2">_</td>
+        </tr>
+        <tr>
+            <td class="game-cell" id="cell_2_0" data-row-id="2" data-coll-id="0">_</td>
+            <td class="game-cell" id="cell_2_1" data-row-id="2" data-coll-id="1">_</td>
+            <td class="game-cell" id="cell_2_2" data-row-id="2" data-coll-id="2">_</td>
+        </tr>
+    </table>
+
+    <table>
+        <tr>
+            <td>You figure</td>
+            <td id="playerMark"></td>
+        </tr>
+        <tr>
+            <td>Whose turn</td>
+            <td id="turnNotification"></td>
+        </tr>
+    </table>
+    <h3 id="gameResult"></h3>
+</div>
 
 <form id="formOneMoreTime" style="display: none;">
     <input type="submit" value="One more time">
