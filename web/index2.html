@@ -119,13 +119,30 @@
         .winCondition {
             background-color: cadetblue;
         }
+
+        .divField {
+            margin: auto;
+            width: 500px;
+            height: 500px;
+        }
+
+        .gameField {
+            border: 1px dashed;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+        }
+
+        .game-cell {
+            font-size: 5rem;
+        }
     </style>
 
 </head>
 <body>
 
-<div style="margin: auto">
-    <table>
+<div class="divField">
+    <table class="gameField">
         <tr>
             <td class="game-cell" id="cell_0_0" data-row-id="0" data-coll-id="0">_</td>
             <td class="game-cell" id="cell_0_1" data-row-id="0" data-coll-id="1">_</td>
