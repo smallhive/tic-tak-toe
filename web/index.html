@@ -59,6 +59,7 @@
                     } else {
                         console.log('You are second');
                     }
+                    gameResult.innerHTML = '';
                     break;
                 case TypeYouTurn:
                     turnNotificationCell.innerHTML = 'You turn';
@@ -187,7 +188,7 @@
 
     <h3 class="centeredText" id="playerMark"></h3>
     <h3 class="centeredText" id="turnNotification"></h3>
-    <h2 class="centeredText" id="gameResult"></h2>
+    <h2 class="centeredText" id="gameResult">We are waiting for opponent</h2>
 </div>
 
 <form id="formOneMoreTime" style="display: none;">
