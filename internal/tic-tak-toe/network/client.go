@@ -1,13 +1,14 @@
-package main
+package network
 
 import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/gorilla/websocket"
+
+	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/event"
 )
 
 const (
@@ -24,16 +25,6 @@ const (
 	maxMessageSize = 512
 )
 
-var (
-	newline = []byte{'\n'}
-	space   = []byte{' '}
-)
-
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-}
-
 // Client is a middleman between the websocket connection and the hub.
 type Client struct {
 	hub *Hub
@@ -45,12 +36,28 @@ type Client struct {
 	send chan []byte
 }
 
-// readPump pumps messages from the websocket connection to the hub.
+func NewClient(hub *Hub, conn *websocket.Conn) *Client {
+	c := &Client{
+		hub:  hub,
+		conn: conn,
+		send: make(chan []byte, 256),
+	}
+
+	hub.register <- c
+
+	return c
+}
+
+func (c *Client) Send(data []byte) {
+	c.send <- data
+}
+
+// ReadPump pumps messages from the websocket connection to the hub.
 //
-// The application runs readPump in a per-connection goroutine. The application
+// The application runs ReadPump in a per-connection goroutine. The application
 // ensures that there is at most one reader on a connection by executing all
 // reads from this goroutine.
-func (c *Client) readPump(w *World) {
+func (c *Client) ReadPump(h Handler) {
 	defer func() {
 		c.hub.unregister <- c
 		c.conn.Close()
@@ -69,21 +76,21 @@ func (c *Client) readPump(w *World) {
 		// message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
 		// c.hub.broadcast <- message
 
-		var e Event
+		var e event.Event
 		if err := json.Unmarshal(message, &e); err != nil {
 			fmt.Println(err)
 		} else {
-			w.Handle(c, &e)
+			h.Handle(c, &e)
 		}
 	}
 }
 
-// writePump pumps messages from the hub to the websocket connection.
+// WritePump pumps messages from the hub to the websocket connection.
 //
-// A goroutine running writePump is started for each connection. The
+// A goroutine running WritePump is started for each connection. The
 // application ensures that there is at most one writer to a connection by
 // executing all writes from this goroutine.
-func (c *Client) writePump() {
+func (c *Client) WritePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
@@ -121,30 +128,5 @@ func (c *Client) writePump() {
 				return
 			}
 		}
-	}
-}
-
-// serveWs handles websocket requests from the peer.
-func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256)}
-	client.hub.register <- client
-	p := hub.World().AddPlayer(client)
-
-	e := NewEventInit(p.Label)
-	conn.WriteJSON(e)
-
-	// Allow collection of memory referenced by the caller by doing all work in
-	// new goroutines.
-	go client.writePump()
-	go client.readPump(hub.World())
-
-	if hub.World().IsFull() {
-		hub.World().StartGame()
 	}
 }

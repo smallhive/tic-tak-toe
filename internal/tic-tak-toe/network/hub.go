@@ -1,10 +1,8 @@
-package main
+package network
 
 // Hub maintains the set of active clients and broadcasts messages to the
 // clients.
 type Hub struct {
-	world *World
-
 	// Registered clients.
 	clients map[*Client]bool
 
@@ -24,15 +22,10 @@ func NewHub() *Hub {
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 		clients:    make(map[*Client]bool),
-		world:      NewWorld(),
 	}
 }
 
-func (h *Hub) World() *World {
-	return h.world
-}
-
-func (h *Hub) run() {
+func (h *Hub) Run() {
 	for {
 		select {
 		case client := <-h.register:
@@ -59,4 +52,8 @@ func (h *Hub) DisconnectAll() {
 	for c, _ := range h.clients {
 		h.unregister <- c
 	}
+}
+
+func (h *Hub) Broadcast(data []byte) {
+	h.broadcast <- data
 }
