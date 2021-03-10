@@ -12,9 +12,13 @@ func (s *Session) stepHandler(c *network.Client, e *event.Step) {
 		return
 	}
 
-	s.stepCounter++
-
 	activePlayer, secondPlayer := s.detectPlayers(c)
+
+	if s.field[e.Row][e.Coll] != MarkEmpty {
+		return
+	}
+
+	s.stepCounter++
 
 	s.field[e.Row][e.Coll] = activePlayer.Label
 

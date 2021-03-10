@@ -26,6 +26,7 @@ var (
 const (
 	MarkCross = "X"
 	MarkBigO  = "O"
+	MarkEmpty = "_"
 )
 
 type Session struct {
@@ -43,7 +44,7 @@ func NewSession(hub *network.Hub, completeChan SessionCompleteChan) *Session {
 		hub:          hub,
 		completeChan: completeChan,
 		id:           time.Now().UnixNano(),
-		field:        [3][3]string{{"_", "_", "_"}, {"_", "_", "_"}, {"_", "_", "_"}},
+		field:        [3][3]string{{MarkEmpty, MarkEmpty, MarkEmpty}, {MarkEmpty, MarkEmpty, MarkEmpty}, {MarkEmpty, MarkEmpty, MarkEmpty}},
 		players:      make(map[*network.Client]*Player),
 		stepCounter:  0,
 	}
