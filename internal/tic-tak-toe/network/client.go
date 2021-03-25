@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/websocket"
 
 	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/event"
@@ -27,6 +28,8 @@ const (
 
 // Client is a middleman between the websocket connection and the hub.
 type Client struct {
+	id int64
+
 	hub *Hub
 
 	// The websocket connection.
@@ -34,13 +37,17 @@ type Client struct {
 
 	// Buffered channel of outbound messages.
 	send chan []byte
+
+	redisChan <-chan *redis.Message
 }
 
-func NewClient(hub *Hub, conn *websocket.Conn) *Client {
+func NewClient(id int64, hub *Hub, conn *websocket.Conn, redisChan <-chan *redis.Message) *Client {
 	c := &Client{
-		hub:  hub,
-		conn: conn,
-		send: make(chan []byte, 256),
+		id:        id,
+		hub:       hub,
+		conn:      conn,
+		send:      make(chan []byte, 256),
+		redisChan: redisChan,
 	}
 
 	hub.register <- c
@@ -80,7 +87,8 @@ func (c *Client) ReadPump(h Handler) {
 		if err := json.Unmarshal(message, &e); err != nil {
 			fmt.Println(err)
 		} else {
-			h.Handle(c, &e)
+			e.UserID = c.id
+			h.Handle(&e)
 		}
 	}
 }
@@ -126,6 +134,13 @@ func (c *Client) WritePump() {
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
+			}
+		case message, ok := <-c.redisChan:
+			if !ok {
+				c.hub.unregister <- c
+			} else {
+				c.send <- []byte(message.Payload)
+				// fmt.Println(message.Payload)
 			}
 		}
 	}

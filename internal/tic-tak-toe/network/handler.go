@@ -5,5 +5,5 @@ import (
 )
 
 type Handler interface {
-	Handle(c *Client, e *event.Event)
+	Handle(e *event.Event)
 }

@@ -1,17 +1,19 @@
 package game
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/event"
-	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/network"
 )
 
 type Player struct {
-	Client     *network.Client `json:"-"`
-	ID         int64           `json:"id"`
-	Label      string          `json:"label"`
-	IsUserStep bool            `json:"-"`
+	ID          int64         `json:"id"`
+	Label       string        `json:"label"`
+	IsUserStep  bool          `json:"-"`
+	redisClient *redis.Client `json:"-"`
 }
 
 func (p *Player) Send(e *event.Event) error {
@@ -20,6 +22,7 @@ func (p *Player) Send(e *event.Event) error {
 		return err
 	}
 
-	p.Client.Send(b)
-	return nil
+	var chanName = fmt.Sprintf("user:%d", p.ID)
+	res := p.redisClient.Publish(context.Background(), chanName, b)
+	return res.Err()
 }

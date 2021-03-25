@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/event"
 	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/network"
 )
@@ -35,7 +36,7 @@ type Session struct {
 
 	id          int64
 	field       [3][3]string
-	players     map[*network.Client]*Player
+	players     map[int64]*Player
 	stepCounter int
 }
 
@@ -45,7 +46,7 @@ func NewSession(hub *network.Hub, completeChan SessionCompleteChan) *Session {
 		completeChan: completeChan,
 		id:           time.Now().UnixNano(),
 		field:        [3][3]string{{MarkEmpty, MarkEmpty, MarkEmpty}, {MarkEmpty, MarkEmpty, MarkEmpty}, {MarkEmpty, MarkEmpty, MarkEmpty}},
-		players:      make(map[*network.Client]*Player),
+		players:      make(map[int64]*Player),
 		stepCounter:  0,
 	}
 }
@@ -73,14 +74,14 @@ func (s *Session) userMark() string {
 	}
 }
 
-func (s *Session) AddPlayer(c *network.Client) *Player {
+func (s *Session) AddPlayer(id int64, redisClient *redis.Client) *Player {
 	p := &Player{
-		Client: c,
-		ID:     time.Now().UnixNano(),
-		Label:  s.userMark(),
+		ID:          id,
+		Label:       s.userMark(),
+		redisClient: redisClient,
 	}
 
-	s.players[c] = p
+	s.players[id] = p
 	return p
 }
 
@@ -100,21 +101,21 @@ func (s *Session) Start() {
 	}
 }
 
-func (s *Session) Handle(c *network.Client, e *event.Event) {
+func (s *Session) Handle(e *event.Event) {
 	switch e.Type {
 	case event.TypeStep:
 		m, _ := json.Marshal(e.Data)
 		var eventStep event.Step
 		json.Unmarshal(m, &eventStep)
 
-		s.stepHandler(c, &eventStep)
+		s.stepHandler(e.UserID, &eventStep)
 	}
 }
 
-func (s *Session) detectPlayers(c *network.Client) (*Player, *Player) {
+func (s *Session) detectPlayers(id int64) (*Player, *Player) {
 	var p1, p2 *Player
 
-	p1 = s.players[c]
+	p1 = s.players[id]
 
 	for _, p := range s.players {
 		if p != p1 {

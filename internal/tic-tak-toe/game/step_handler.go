@@ -2,17 +2,16 @@ package game
 
 import (
 	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/event"
-	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/network"
 )
 
-func (s *Session) stepHandler(c *network.Client, e *event.Step) {
-	p, _ := s.players[c]
+func (s *Session) stepHandler(id int64, e *event.Step) {
+	p, _ := s.players[id]
 	if !p.IsUserStep {
 		p.Send(event.NewNotYouTurn())
 		return
 	}
 
-	activePlayer, secondPlayer := s.detectPlayers(c)
+	activePlayer, secondPlayer := s.detectPlayers(id)
 
 	if s.field[e.Row][e.Coll] != MarkEmpty {
 		return

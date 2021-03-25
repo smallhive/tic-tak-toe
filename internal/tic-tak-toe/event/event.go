@@ -20,8 +20,9 @@ type NoBody struct {
 }
 
 type Event struct {
-	Type int         `json:"type"`
-	Data interface{} `json:"data"`
+	UserID int64       `json:"-"`
+	Type   int         `json:"type"`
+	Data   interface{} `json:"data"`
 }
 
 func (e *Event) JSON() []byte {
