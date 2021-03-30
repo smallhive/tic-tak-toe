@@ -30,11 +30,13 @@ func (h *Hub) Run() {
 		select {
 		case client := <-h.register:
 			h.clients[client] = true
+
 		case client := <-h.unregister:
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
 				close(client.send)
 			}
+
 		case message := <-h.broadcast:
 			for client := range h.clients {
 				select {
@@ -48,12 +50,12 @@ func (h *Hub) Run() {
 	}
 }
 
-func (h *Hub) DisconnectAll() {
-	for c, _ := range h.clients {
-		h.unregister <- c
-	}
-}
+// func (handler *Hub) DisconnectAll() {
+// 	for c, _ := range handler.clients {
+// 		handler.unregister <- c
+// 	}
+// }
 
-func (h *Hub) Broadcast(data []byte) {
-	h.broadcast <- data
-}
+// func (handler *Hub) Broadcast(data []byte) {
+// 	handler.broadcast <- data
+// }

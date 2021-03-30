@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -11,7 +10,6 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/websocket"
 
-	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/event"
 	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/game"
 	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/network"
 )
@@ -40,13 +38,18 @@ func main() {
 
 	rdb := redis.NewClient(&redis.Options{
 		Addr:         "lan_ip:6379",
-		MinIdleConns: 5,
+		MinIdleConns: 10,
 		DB:           0,
 	})
 
+	hub := network.NewHub()
+	go hub.Run()
+	q := game.NewQueue(rdb, gm)
+	q.Reset(context.Background())
+
 	http.HandleFunc("/", serveHome)
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		serveWs(gm, rdb, w, r)
+		serveWs(hub, q, rdb, w, r)
 	})
 
 	err := http.ListenAndServe(*addr, nil)
@@ -61,29 +64,40 @@ var upgrader = websocket.Upgrader{
 }
 
 // serveWs handles websocket requests from the peer.
-func serveWs(gm *game.Manager, redisClient *redis.Client, w http.ResponseWriter, r *http.Request) {
+func serveWs(h *network.Hub, q *game.Queue, redisClient *redis.Client, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
 		return
 	}
 
-	session := gm.Session()
-
+	ctx := context.Background()
 	var id = time.Now().UnixNano()
-	var chanName = fmt.Sprintf("user:%d", id)
-	pubSub := redisClient.Subscribe(context.Background(), chanName)
 
-	client := network.NewClient(id, session.Hub(), conn, pubSub.Channel())
-	player := session.AddPlayer(id, redisClient)
-	player.Send(event.NewInit(player.Label, session.ID()))
+	var proxyConfig = network.NewPlayerProxyConfig(id)
 
-	// Allow collection of memory referenced by the caller by doing all work in
-	// new goroutines.
+	var playerPubSub = redisClient.Subscribe(ctx, proxyConfig.UserChanName)
+	var controlPubSub = redisClient.Subscribe(ctx, proxyConfig.ControlChanName)
+
+	client := network.NewClient(id, h, conn, redisClient, playerPubSub.Channel(), controlPubSub.Channel())
+
+	if err := q.Add(ctx, id); err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	amount, err := q.MemberAmount(ctx)
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	go client.WritePump()
-	go client.ReadPump(session)
+	go client.ReadPump()
 
-	if session.IsFull() {
-		session.Start()
+	if amount > 1 {
+		q.StartGame(ctx)
 	}
 }

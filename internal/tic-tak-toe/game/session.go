@@ -1,12 +1,14 @@
 package game
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/event"
-	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/network"
+	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/game/player"
 )
 
 var (
@@ -31,28 +33,24 @@ const (
 )
 
 type Session struct {
-	hub          *network.Hub
 	completeChan SessionCompleteChan
 
 	id          int64
 	field       [3][3]string
-	players     map[int64]*Player
+	players     map[int64]*player.Player
 	stepCounter int
+	cmdChan     <-chan *redis.Message
 }
 
-func NewSession(hub *network.Hub, completeChan SessionCompleteChan) *Session {
+func NewSession(completeChan SessionCompleteChan) *Session {
 	return &Session{
-		hub:          hub,
 		completeChan: completeChan,
-		id:           time.Now().UnixNano(),
-		field:        [3][3]string{{MarkEmpty, MarkEmpty, MarkEmpty}, {MarkEmpty, MarkEmpty, MarkEmpty}, {MarkEmpty, MarkEmpty, MarkEmpty}},
-		players:      make(map[int64]*Player),
-		stepCounter:  0,
+		// id:           time.Now().UnixNano(),
+		id:          time.Now().Unix(),
+		field:       [3][3]string{{MarkEmpty, MarkEmpty, MarkEmpty}, {MarkEmpty, MarkEmpty, MarkEmpty}, {MarkEmpty, MarkEmpty, MarkEmpty}},
+		players:     make(map[int64]*player.Player),
+		stepCounter: 0,
 	}
-}
-
-func (s *Session) Hub() *network.Hub {
-	return s.hub
 }
 
 func (s *Session) ID() int64 {
@@ -63,7 +61,7 @@ func (s *Session) IsFull() bool {
 	return len(s.players) == 2
 }
 
-func (s *Session) userMark() string {
+func (s *Session) UserMark() string {
 	switch len(s.players) {
 	case 0:
 		return MarkBigO
@@ -74,46 +72,71 @@ func (s *Session) userMark() string {
 	}
 }
 
-func (s *Session) AddPlayer(id int64, redisClient *redis.Client) *Player {
-	p := &Player{
-		ID:          id,
-		Label:       s.userMark(),
-		redisClient: redisClient,
-	}
+func (s *Session) AddPlayer(p *player.Player) *player.Player {
+	s.players[p.ID] = p
 
-	s.players[id] = p
 	return p
 }
 
-func (s *Session) Start() {
+func (s *Session) Start(cmdChan <-chan *redis.Message) {
 	isFirst := true
+	fmt.Println("GameStarting", s.id)
 	for _, p := range s.players {
-		p.Send(event.NewGameStared(isFirst))
+		p.Send(context.Background(), event.NewGameStared(isFirst, s.id))
+		p.SendControl(context.Background(), event.NewControlGameStarted(s.id))
 
 		if isFirst {
 			p.IsUserStep = true
-			p.Send(event.NewYouTurn())
+			p.Send(context.Background(), event.NewYouTurn())
 		} else {
-			p.Send(event.NewNotYouTurn())
+			p.Send(context.Background(), event.NewNotYouTurn())
 		}
 
 		isFirst = false
 	}
+
+	s.cmdChan = cmdChan
+
+	go func() {
+		for {
+			fmt.Println(1)
+			message, ok := <-s.cmdChan
+			if !ok {
+				fmt.Println(2)
+				break
+			}
+			fmt.Println(3)
+			fmt.Println(message)
+
+			var e event.Event
+			if err := json.Unmarshal([]byte(message.Payload), &e); err != nil {
+				fmt.Println(err)
+			} else {
+				if err = s.Handle(&e); err != nil {
+					fmt.Println(err)
+				}
+			}
+		}
+	}()
 }
 
-func (s *Session) Handle(e *event.Event) {
+func (s *Session) Handle(e *event.Event) error {
 	switch e.Type {
 	case event.TypeStep:
 		m, _ := json.Marshal(e.Data)
 		var eventStep event.Step
-		json.Unmarshal(m, &eventStep)
+		if err := json.Unmarshal(m, &eventStep); err != nil {
+			return err
+		}
 
-		s.stepHandler(e.UserID, &eventStep)
+		return s.stepHandler(e.UserID, &eventStep)
 	}
+
+	return nil
 }
 
-func (s *Session) detectPlayers(id int64) (*Player, *Player) {
-	var p1, p2 *Player
+func (s *Session) detectPlayers(id int64) (*player.Player, *player.Player) {
+	var p1, p2 *player.Player
 
 	p1 = s.players[id]
 
@@ -127,12 +150,10 @@ func (s *Session) detectPlayers(id int64) (*Player, *Player) {
 }
 
 func (s *Session) broadcast(e *event.Event) error {
-	b, err := json.Marshal(e)
-	if err != nil {
-		return err
+	for _, p := range s.players {
+		p.Send(context.Background(), e)
 	}
 
-	s.hub.Broadcast(b)
 	return nil
 }
 
@@ -169,8 +190,8 @@ func (s *Session) checkWinCondition(field [3][3]string) (bool, string, [][2]int)
 	return false, "", nil
 }
 
-func (s *Session) resolvePlayer(sign string) (*Player, *Player) {
-	var winner, loser *Player
+func (s *Session) resolvePlayer(sign string) (*player.Player, *player.Player) {
+	var winner, loser *player.Player
 
 	for _, p := range s.players {
 		if p.Label == sign {

@@ -1,6 +1,7 @@
 package network
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -38,16 +39,24 @@ type Client struct {
 	// Buffered channel of outbound messages.
 	send chan []byte
 
-	redisChan <-chan *redis.Message
+	// Channel for receiving messages from Game
+	proxy <-chan *redis.Message
+	// Channel for receiving Control/System messages from Game
+	control <-chan *redis.Message
+
+	redis   *redis.Client
+	handler Handler
 }
 
-func NewClient(id int64, hub *Hub, conn *websocket.Conn, redisChan <-chan *redis.Message) *Client {
+func NewClient(id int64, hub *Hub, conn *websocket.Conn, redis *redis.Client, proxy <-chan *redis.Message, control <-chan *redis.Message) *Client {
 	c := &Client{
-		id:        id,
-		hub:       hub,
-		conn:      conn,
-		send:      make(chan []byte, 256),
-		redisChan: redisChan,
+		id:      id,
+		hub:     hub,
+		conn:    conn,
+		send:    make(chan []byte, maxMessageSize),
+		proxy:   proxy,
+		control: control,
+		redis:   redis,
 	}
 
 	hub.register <- c
@@ -59,19 +68,25 @@ func (c *Client) Send(data []byte) {
 	c.send <- data
 }
 
+func (c *Client) SetHandler(h Handler) {
+	c.handler = h
+}
+
 // ReadPump pumps messages from the websocket connection to the hub.
 //
 // The application runs ReadPump in a per-connection goroutine. The application
 // ensures that there is at most one reader on a connection by executing all
 // reads from this goroutine.
-func (c *Client) ReadPump(h Handler) {
+func (c *Client) ReadPump() {
 	defer func() {
 		c.hub.unregister <- c
 		c.conn.Close()
 	}()
+
 	c.conn.SetReadLimit(maxMessageSize)
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+
 	for {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
@@ -83,12 +98,19 @@ func (c *Client) ReadPump(h Handler) {
 		// message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
 		// c.hub.broadcast <- message
 
+		if c.handler == nil {
+			fmt.Println("handler isn't set")
+			continue
+		}
+
 		var e event.Event
 		if err := json.Unmarshal(message, &e); err != nil {
 			fmt.Println(err)
 		} else {
 			e.UserID = c.id
-			h.Handle(&e)
+			if err := c.handler.Handle(context.Background(), &e); err != nil {
+				fmt.Println(err)
+			}
 		}
 	}
 }
@@ -100,10 +122,12 @@ func (c *Client) ReadPump(h Handler) {
 // executing all writes from this goroutine.
 func (c *Client) WritePump() {
 	ticker := time.NewTicker(pingPeriod)
+
 	defer func() {
 		ticker.Stop()
 		c.conn.Close()
 	}()
+
 	for {
 		select {
 		case message, ok := <-c.send:
@@ -130,18 +154,50 @@ func (c *Client) WritePump() {
 			if err := w.Close(); err != nil {
 				return
 			}
+
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
-		case message, ok := <-c.redisChan:
+
+		case message, ok := <-c.proxy:
 			if !ok {
 				c.hub.unregister <- c
 			} else {
 				c.send <- []byte(message.Payload)
 				// fmt.Println(message.Payload)
 			}
+
+		case message := <-c.control:
+			var e event.Event
+			if err := json.Unmarshal([]byte(message.Payload), &e); err != nil {
+				fmt.Println(err)
+			} else {
+				c.handleControl(&e)
+			}
 		}
 	}
+}
+
+func (c *Client) handleControl(e *event.Event) error {
+	switch e.Type {
+	case event.TypeControlDisconnect:
+		c.hub.unregister <- c
+
+	case event.TypeControlGameStared:
+		m, _ := json.Marshal(e.Data)
+		var started event.ControlGameStarted
+		if err := json.Unmarshal(m, &started); err != nil {
+			return err
+		}
+
+		fmt.Println("received game_id", started.ID)
+
+		var cfg = NewGameProxyConfig(started.ID)
+		var h = NewGameHandler(c.redis, cfg)
+		c.handler = h
+	}
+
+	return nil
 }
