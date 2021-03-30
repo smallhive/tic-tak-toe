@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/go-redis/redis/v8"
+
 	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/event"
 	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/game/player"
 )
@@ -35,9 +37,9 @@ const (
 type Session struct {
 	completeChan SessionCompleteChan
 
-	id          int64
+	id          string
 	field       [3][3]string
-	players     map[int64]*player.Player
+	players     map[string]*player.Player
 	stepCounter int
 	cmdChan     <-chan *redis.Message
 }
@@ -45,15 +47,14 @@ type Session struct {
 func NewSession(completeChan SessionCompleteChan) *Session {
 	return &Session{
 		completeChan: completeChan,
-		// id:           time.Now().UnixNano(),
-		id:          time.Now().Unix(),
-		field:       [3][3]string{{MarkEmpty, MarkEmpty, MarkEmpty}, {MarkEmpty, MarkEmpty, MarkEmpty}, {MarkEmpty, MarkEmpty, MarkEmpty}},
-		players:     make(map[int64]*player.Player),
-		stepCounter: 0,
+		id:           strconv.FormatInt(time.Now().UnixNano(), 16),
+		field:        [3][3]string{{MarkEmpty, MarkEmpty, MarkEmpty}, {MarkEmpty, MarkEmpty, MarkEmpty}, {MarkEmpty, MarkEmpty, MarkEmpty}},
+		players:      make(map[string]*player.Player),
+		stepCounter:  0,
 	}
 }
 
-func (s *Session) ID() int64 {
+func (s *Session) ID() string {
 	return s.id
 }
 
@@ -99,14 +100,10 @@ func (s *Session) Start(cmdChan <-chan *redis.Message) {
 
 	go func() {
 		for {
-			fmt.Println(1)
 			message, ok := <-s.cmdChan
 			if !ok {
-				fmt.Println(2)
 				break
 			}
-			fmt.Println(3)
-			fmt.Println(message)
 
 			var e event.Event
 			if err := json.Unmarshal([]byte(message.Payload), &e); err != nil {
@@ -135,7 +132,7 @@ func (s *Session) Handle(e *event.Event) error {
 	return nil
 }
 
-func (s *Session) detectPlayers(id int64) (*player.Player, *player.Player) {
+func (s *Session) detectPlayers(id string) (*player.Player, *player.Player) {
 	var p1, p2 *player.Player
 
 	p1 = s.players[id]

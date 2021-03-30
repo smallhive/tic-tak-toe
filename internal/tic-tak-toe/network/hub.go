@@ -35,6 +35,7 @@ func (h *Hub) Run() {
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
 				close(client.send)
+				client.Close()
 			}
 
 		case message := <-h.broadcast:
@@ -44,6 +45,7 @@ func (h *Hub) Run() {
 				default:
 					close(client.send)
 					delete(h.clients, client)
+					client.Close()
 				}
 			}
 		}

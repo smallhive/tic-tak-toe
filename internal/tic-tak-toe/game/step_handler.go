@@ -6,7 +6,7 @@ import (
 	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/event"
 )
 
-func (s *Session) stepHandler(id int64, e *event.Step) error {
+func (s *Session) stepHandler(id string, e *event.Step) error {
 	p, _ := s.players[id]
 	if !p.IsUserStep {
 		p.Send(context.Background(), event.NewNotYouTurn())
@@ -39,19 +39,17 @@ func (s *Session) stepHandler(id int64, e *event.Step) error {
 		if winner != nil && loser != nil {
 			winner.Send(ctx, event.NewGameEnded(true, winCond))
 			loser.Send(ctx, event.NewGameEnded(false, winCond))
+
+			winner.SendControl(ctx, event.NewControlDisconnect())
+			loser.SendControl(ctx, event.NewControlDisconnect())
 		}
 
-		winner.SendControl(ctx, event.NewControlDisconnect())
-		loser.SendControl(ctx, event.NewControlDisconnect())
-
-		// s.hub.DisconnectAll()
 		s.terminate()
 		return nil
 	}
 
 	if s.stepCounter >= 9 {
 		s.broadcast(event.NewGameFailed())
-		// s.hub.DisconnectAll()
 		activePlayer.SendControl(ctx, event.NewControlDisconnect())
 		secondPlayer.SendControl(ctx, event.NewControlDisconnect())
 

@@ -5,6 +5,7 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -72,14 +73,14 @@ func serveWs(h *network.Hub, q *game.Queue, redisClient *redis.Client, w http.Re
 	}
 
 	ctx := context.Background()
-	var id = time.Now().UnixNano()
+	var id = strconv.FormatInt(time.Now().UnixNano(), 16)
 
 	var proxyConfig = network.NewPlayerProxyConfig(id)
 
 	var playerPubSub = redisClient.Subscribe(ctx, proxyConfig.UserChanName)
 	var controlPubSub = redisClient.Subscribe(ctx, proxyConfig.ControlChanName)
 
-	client := network.NewClient(id, h, conn, redisClient, playerPubSub.Channel(), controlPubSub.Channel())
+	client := network.NewClient(id, h, conn, redisClient, playerPubSub, controlPubSub)
 
 	if err := q.Add(ctx, id); err != nil {
 		log.Println(err)

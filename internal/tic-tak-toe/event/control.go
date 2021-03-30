@@ -13,10 +13,10 @@ func NewControlDisconnect() *Event {
 }
 
 type ControlGameStarted struct {
-	ID int64
+	ID string
 }
 
-func NewControlGameStarted(id int64) *Event {
+func NewControlGameStarted(id string) *Event {
 	return &Event{
 		Type: TypeControlGameStared,
 		Data: &ControlGameStarted{ID: id},

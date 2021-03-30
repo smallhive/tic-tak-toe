@@ -20,7 +20,7 @@ type NoBody struct {
 }
 
 type Event struct {
-	UserID int64       `json:"id"`
+	UserID string      `json:"id"`
 	Type   int         `json:"type"`
 	Data   interface{} `json:"data"`
 }
@@ -50,10 +50,10 @@ type GameConnect struct {
 
 type GameStarted struct {
 	IsFirstPlayer bool
-	ID            int64
+	ID            string
 }
 
-func NewGameStared(IsFirstPlayer bool, id int64) *Event {
+func NewGameStared(IsFirstPlayer bool, id string) *Event {
 	return &Event{
 		Type: TypeGameStarted,
 		Data: &GameStarted{IsFirstPlayer: IsFirstPlayer, ID: id},

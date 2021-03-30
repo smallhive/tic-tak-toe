@@ -3,7 +3,6 @@ package game
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"github.com/go-redis/redis/v8"
 
@@ -30,7 +29,7 @@ func (q *Queue) Reset(ctx context.Context) error {
 	return r.Err()
 }
 
-func (q *Queue) Add(ctx context.Context, id int64) error {
+func (q *Queue) Add(ctx context.Context, id string) error {
 	r := q.redis.SAdd(ctx, q.setName, id)
 	return r.Err()
 }
@@ -55,15 +54,9 @@ func (q *Queue) StartGame(ctx context.Context) error {
 	for _, id := range ids {
 		q.redis.SRem(ctx, q.setName, id)
 
-		uid, err := strconv.ParseInt(id, 10, 64)
-		if err != nil {
-			fmt.Println(err)
-			return err
-		}
-
-		var cfg = network.NewPlayerProxyConfig(uid)
+		var cfg = network.NewPlayerProxyConfig(id)
 		var proxy = NewPlayerProxy(q.redis, cfg)
-		var p = player.NewPlayer(uid, session.UserMark(), proxy)
+		var p = player.NewPlayer(id, session.UserMark(), proxy)
 
 		session.AddPlayer(p)
 	}

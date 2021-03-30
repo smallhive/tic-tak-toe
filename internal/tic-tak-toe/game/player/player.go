@@ -7,13 +7,13 @@ import (
 )
 
 type Player struct {
-	ID         int64  `json:"id"`
+	ID         string `json:"id"`
 	Label      string `json:"label"`
 	IsUserStep bool   `json:"-"`
 	proxy      Proxy
 }
 
-func NewPlayer(id int64, label string, proxy Proxy) *Player {
+func NewPlayer(id string, label string, proxy Proxy) *Player {
 	return &Player{
 		ID:    id,
 		Label: label,

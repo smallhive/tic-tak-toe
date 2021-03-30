@@ -29,7 +29,7 @@ const (
 
 // Client is a middleman between the websocket connection and the hub.
 type Client struct {
-	id int64
+	id string
 
 	hub *Hub
 
@@ -40,15 +40,15 @@ type Client struct {
 	send chan []byte
 
 	// Channel for receiving messages from Game
-	proxy <-chan *redis.Message
+	proxy *redis.PubSub
 	// Channel for receiving Control/System messages from Game
-	control <-chan *redis.Message
+	control *redis.PubSub
 
 	redis   *redis.Client
 	handler Handler
 }
 
-func NewClient(id int64, hub *Hub, conn *websocket.Conn, redis *redis.Client, proxy <-chan *redis.Message, control <-chan *redis.Message) *Client {
+func NewClient(id string, hub *Hub, conn *websocket.Conn, redis *redis.Client, proxy *redis.PubSub, control *redis.PubSub) *Client {
 	c := &Client{
 		id:      id,
 		hub:     hub,
@@ -161,7 +161,7 @@ func (c *Client) WritePump() {
 				return
 			}
 
-		case message, ok := <-c.proxy:
+		case message, ok := <-c.proxy.Channel():
 			if !ok {
 				c.hub.unregister <- c
 			} else {
@@ -169,7 +169,11 @@ func (c *Client) WritePump() {
 				// fmt.Println(message.Payload)
 			}
 
-		case message := <-c.control:
+		case message, ok := <-c.control.Channel():
+			if !ok {
+				fmt.Println("control chan closed")
+				continue
+			}
 			var e event.Event
 			if err := json.Unmarshal([]byte(message.Payload), &e); err != nil {
 				fmt.Println(err)
@@ -192,12 +196,15 @@ func (c *Client) handleControl(e *event.Event) error {
 			return err
 		}
 
-		fmt.Println("received game_id", started.ID)
-
 		var cfg = NewGameProxyConfig(started.ID)
 		var h = NewGameHandler(c.redis, cfg)
 		c.handler = h
 	}
 
 	return nil
+}
+
+func (c *Client) Close() {
+	c.control.Close()
+	c.proxy.Close()
 }

@@ -11,14 +11,14 @@ type Manager struct {
 	worldCounter int64
 
 	mutex    *sync.RWMutex
-	sessions map[int64]*Session
+	sessions map[string]*Session
 
 	endedSessions SessionCompleteChan
 }
 
 func NewManager() *Manager {
 	m := &Manager{
-		sessions: make(map[int64]*Session),
+		sessions: make(map[string]*Session),
 		mutex:    &sync.RWMutex{},
 	}
 

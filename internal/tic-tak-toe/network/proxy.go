@@ -12,10 +12,10 @@ type PlayerProxyConfig struct {
 	ControlChanName string
 }
 
-func NewPlayerProxyConfig(id int64) *PlayerProxyConfig {
+func NewPlayerProxyConfig(id string) *PlayerProxyConfig {
 	return &PlayerProxyConfig{
-		UserChanName:    fmt.Sprintf("user:%d", id),
-		ControlChanName: fmt.Sprintf("user:control:%d", id),
+		UserChanName:    fmt.Sprintf("user:%s", id),
+		ControlChanName: fmt.Sprintf("user:control:%s", id),
 	}
 }
 
@@ -23,8 +23,8 @@ type GameProxyConfig struct {
 	ChanName string
 }
 
-func NewGameProxyConfig(id int64) *GameProxyConfig {
+func NewGameProxyConfig(id string) *GameProxyConfig {
 	return &GameProxyConfig{
-		ChanName: fmt.Sprintf("game:%d", id),
+		ChanName: fmt.Sprintf("game:%s", id),
 	}
 }
