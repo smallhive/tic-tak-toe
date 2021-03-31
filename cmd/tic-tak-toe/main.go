@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -11,13 +11,11 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/websocket"
 
+	"github.com/smallhive/tic-tak-toe/app"
+	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/config"
 	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/game"
 	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/network"
 )
-
-// Отправка в закрытый канал. Проверить что заканчиваются горутины в хабах
-
-var addr = flag.String("addr", ":8080", "http service address")
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.URL)
@@ -33,12 +31,13 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	flag.Parse()
+	fmt.Println(app.Name, app.Version, app.Commit)
 
+	var c = config.Load()
 	gm := game.NewManager()
 
 	rdb := redis.NewClient(&redis.Options{
-		Addr:         "lan_ip:6379",
+		Addr:         c.RedisAddr,
 		MinIdleConns: 10,
 		DB:           0,
 	})
@@ -53,7 +52,7 @@ func main() {
 		serveWs(hub, q, rdb, w, r)
 	})
 
-	err := http.ListenAndServe(*addr, nil)
+	err := http.ListenAndServe(c.Addr, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
@@ -62,6 +61,9 @@ func main() {
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
 }
 
 // serveWs handles websocket requests from the peer.
@@ -75,6 +77,7 @@ func serveWs(h *network.Hub, q *game.Queue, redisClient *redis.Client, w http.Re
 	ctx := context.Background()
 	var id = strconv.FormatInt(time.Now().UnixNano(), 16)
 
+	log.Println("user connected", id)
 	var proxyConfig = network.NewPlayerProxyConfig(id)
 
 	var playerPubSub = redisClient.Subscribe(ctx, proxyConfig.UserChanName)

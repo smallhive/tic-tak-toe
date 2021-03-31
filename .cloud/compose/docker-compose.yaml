@@ -1,0 +1,26 @@
+version: '3'
+services:
+
+  tic-tak-toe:
+    image: belazar13/tic-tak-toe:0.0.5
+    deploy:
+      replicas: 3
+    environment:
+      TTT_ADDR: ":8080"
+      TTT_REDIS_ADDR: "redis:6379"
+    restart: "no"
+    ports:
+      - "8080"
+
+  redis:
+    image: redis:6.2.1
+    restart: "no"
+
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - tic-tak-toe
+    ports:
+      - "8080:8080"
