@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/websocket"
 
 	"github.com/smallhive/tic-tak-toe/app"
+	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/closer"
 	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/config"
 	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/game"
 	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/network"
@@ -83,7 +84,8 @@ func serveWs(h *network.Hub, q *game.Queue, redisClient *redis.Client, w http.Re
 	var playerPubSub = redisClient.Subscribe(ctx, proxyConfig.UserChanName)
 	var controlPubSub = redisClient.Subscribe(ctx, proxyConfig.ControlChanName)
 
-	client := network.NewClient(id, h, conn, redisClient, playerPubSub, controlPubSub)
+	var cl = closer.NewCloser()
+	client := network.NewClient(id, h, conn, redisClient, playerPubSub, controlPubSub, cl)
 
 	if err := q.Add(ctx, id); err != nil {
 		log.Println(err)
@@ -97,6 +99,13 @@ func serveWs(h *network.Hub, q *game.Queue, redisClient *redis.Client, w http.Re
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
+	cl.Add(func() error {
+		return playerPubSub.Close()
+	})
+	cl.Add(func() error {
+		return controlPubSub.Close()
+	})
 
 	go client.WritePump()
 	go client.ReadPump()

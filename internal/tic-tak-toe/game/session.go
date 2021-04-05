@@ -34,6 +34,7 @@ const (
 	MarkEmpty = "_"
 )
 
+// Session is a main Game class. Processes command from players
 type Session struct {
 	completeChan SessionCompleteChan
 
@@ -127,6 +128,8 @@ func (s *Session) Handle(e *event.Event) error {
 		}
 
 		return s.stepHandler(e.UserID, &eventStep)
+	case event.TypeUnexpectedDisconnect:
+		return s.unexpectedDisconnectHandler(e.UserID)
 	}
 
 	return nil

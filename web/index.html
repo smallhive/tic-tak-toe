@@ -12,6 +12,7 @@
         const TypeFieldUpdate = 7
         const TypeGameEnded = 8
         const TypeGameFailed = 9
+        const TypeOpponentUnexpectedDisconnect = 11
 
         let playerMark = undefined;
         let conn;
@@ -34,7 +35,7 @@
                     handleEvent(e);
                 };
             } else {
-                var item = document.createElement("div");
+                let item = document.createElement("div");
                 item.innerHTML = "<b>Your browser does not support WebSockets.</b>";
                 appendLog(item);
             }
@@ -105,6 +106,9 @@
                     turnNotificationCell.innerHTML = '';
                     // alert('No winners! Reconnect to attempt one more time ;)')
                     break
+                case TypeOpponentUnexpectedDisconnect:
+                    gameResult.innerHTML = 'Opponent has left. You win!';
+                    break;
             }
         }
 

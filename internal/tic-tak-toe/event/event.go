@@ -14,6 +14,12 @@ const (
 	TypeFieldUpdate = 7
 	TypeGameEnded   = 8
 	TypeGameFailed  = 9
+
+	// TypeUnexpectedDisconnect will be sent to Game, when one player has disconnected
+	TypeUnexpectedDisconnect = 10
+
+	// TypeOpponentUnexpectedDisconnect will be send to Second player if first quit
+	TypeOpponentUnexpectedDisconnect = 11
 )
 
 type NoBody struct {
@@ -105,6 +111,21 @@ func NewGameEnded(IsWin bool, Condition [][2]int) *Event {
 func NewGameFailed() *Event {
 	return &Event{
 		Type: TypeGameFailed,
+		Data: &NoBody{},
+	}
+}
+
+func NewUnexpectedDisconnect(id string) *Event {
+	return &Event{
+		UserID: id,
+		Type:   TypeUnexpectedDisconnect,
+		Data:   &NoBody{},
+	}
+}
+
+func NewOpponentUnexpectedDisconnect() *Event {
+	return &Event{
+		Type: TypeOpponentUnexpectedDisconnect,
 		Data: &NoBody{},
 	}
 }

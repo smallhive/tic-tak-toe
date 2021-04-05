@@ -12,6 +12,10 @@ Just simple investigations/attempts of tic-tak-toe game on
 
 ## Run server
 
+### With composer
+
+> Complete variant with Redis and Nginx integration
+
 ```shell
 cd ./.cloud/compose/
 docker-compose up -d

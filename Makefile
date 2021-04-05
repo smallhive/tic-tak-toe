@@ -20,7 +20,8 @@ clean:
 	@rm -f ./build/bin/${APP}
 
 docker-build:
-	docker build -t ${REGISTRY_PATH}:${RELEASE} -f ./.cloud/build/Dockerfile .
+	docker build -t ${REGISTRY_PATH}:${RELEASE} -t ${REGISTRY_PATH}:latest -f ./.cloud/build/Dockerfile .
 
 docker-push:
 	docker push ${REGISTRY_PATH}:${RELEASE}
+	docker push ${REGISTRY_PATH}:latest

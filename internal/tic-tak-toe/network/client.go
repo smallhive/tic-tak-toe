@@ -10,6 +10,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/websocket"
 
+	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/closer"
 	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/event"
 )
 
@@ -46,9 +47,11 @@ type Client struct {
 
 	redis   *redis.Client
 	handler Handler
+
+	closer *closer.Closer
 }
 
-func NewClient(id string, hub *Hub, conn *websocket.Conn, redis *redis.Client, proxy *redis.PubSub, control *redis.PubSub) *Client {
+func NewClient(id string, hub *Hub, conn *websocket.Conn, redis *redis.Client, proxy *redis.PubSub, control *redis.PubSub, waiter *closer.Closer) *Client {
 	c := &Client{
 		id:      id,
 		hub:     hub,
@@ -57,6 +60,7 @@ func NewClient(id string, hub *Hub, conn *websocket.Conn, redis *redis.Client, p
 		proxy:   proxy,
 		control: control,
 		redis:   redis,
+		closer:  waiter,
 	}
 
 	hub.register <- c
@@ -66,10 +70,6 @@ func NewClient(id string, hub *Hub, conn *websocket.Conn, redis *redis.Client, p
 
 func (c *Client) Send(data []byte) {
 	c.send <- data
-}
-
-func (c *Client) SetHandler(h Handler) {
-	c.handler = h
 }
 
 // ReadPump pumps messages from the websocket connection to the hub.
@@ -99,7 +99,7 @@ func (c *Client) ReadPump() {
 		// c.hub.broadcast <- message
 
 		if c.handler == nil {
-			fmt.Println("handler isn't set")
+			fmt.Println("logic handler isn't set for client", c.id)
 			continue
 		}
 
@@ -199,12 +199,15 @@ func (c *Client) handleControl(e *event.Event) error {
 		var cfg = NewGameProxyConfig(started.ID)
 		var h = NewGameHandler(c.redis, cfg)
 		c.handler = h
+
+		c.closer.Add(func() error {
+			return h.Handle(context.Background(), event.NewUnexpectedDisconnect(c.id))
+		})
 	}
 
 	return nil
 }
 
 func (c *Client) Close() {
-	c.control.Close()
-	c.proxy.Close()
+	c.closer.Close()
 }
