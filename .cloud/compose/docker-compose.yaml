@@ -2,7 +2,7 @@ version: '3'
 services:
 
   tic-tak-toe:
-    image: belazar13/tic-tak-toe:0.0.7
+    image: belazar13/tic-tak-toe:latest
     deploy:
       replicas: 3
     environment:

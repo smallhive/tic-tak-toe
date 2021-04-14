@@ -1,0 +1,33 @@
+.win-condition {
+    background-color: cadetblue;
+}
+
+.you-step {
+    color: darkgreen;
+}
+
+.opponent-step {
+    color: indianred;
+}
+
+.field {
+    margin: auto;
+    width: 500px;
+    height: 500px;
+}
+
+.game-field {
+    width: 100%;
+    height: 100%;
+    text-align: center;
+}
+
+.game-cell {
+    font-size: 5rem;
+    min-width: 182px;
+    border: 1px dashed;
+}
+
+.centered-text {
+    text-align: center;
+}

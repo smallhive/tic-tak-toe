@@ -12,24 +12,12 @@ import (
 	"github.com/gorilla/websocket"
 
 	"github.com/smallhive/tic-tak-toe/app"
+	"github.com/smallhive/tic-tak-toe/cmd/tic-tak-toe/web"
 	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/closer"
 	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/config"
 	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/game"
 	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/network"
 )
-
-func serveHome(w http.ResponseWriter, r *http.Request) {
-	log.Println(r.URL)
-	if r.URL.Path != "/" {
-		http.Error(w, "Not found", http.StatusNotFound)
-		return
-	}
-	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	http.ServeFile(w, r, "web/index.html")
-}
 
 func main() {
 	fmt.Println(app.Name, app.Version, app.Commit)
@@ -48,7 +36,7 @@ func main() {
 	q := game.NewQueue(rdb, gm)
 	q.Reset(context.Background())
 
-	http.HandleFunc("/", serveHome)
+	http.Handle("/", http.StripPrefix("/", http.FileServer(http.FS(web.Content))))
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(hub, q, rdb, w, r)
 	})

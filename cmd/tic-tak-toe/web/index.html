@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Tic-tak-toe</title>
+    <script src="/js/game.js"></script>
+    <link rel="stylesheet" href="/css/game.css">
+</head>
+<body>
+<script>
+    document.addEventListener("DOMContentLoaded", ready);
+</script>
+
+<div class="field">
+    <table class="game-field">
+        <tr>
+            <td class="game-cell" id="cell_0_0" data-row-id="0" data-coll-id="0">_</td>
+            <td class="game-cell" id="cell_0_1" data-row-id="0" data-coll-id="1">_</td>
+            <td class="game-cell" id="cell_0_2" data-row-id="0" data-coll-id="2">_</td>
+        </tr>
+        <tr>
+            <td class="game-cell" id="cell_1_0" data-row-id="1" data-coll-id="0">_</td>
+            <td class="game-cell" id="cell_1_1" data-row-id="1" data-coll-id="1">_</td>
+            <td class="game-cell" id="cell_1_2" data-row-id="1" data-coll-id="2">_</td>
+        </tr>
+        <tr>
+            <td class="game-cell" id="cell_2_0" data-row-id="2" data-coll-id="0">_</td>
+            <td class="game-cell" id="cell_2_1" data-row-id="2" data-coll-id="1">_</td>
+            <td class="game-cell" id="cell_2_2" data-row-id="2" data-coll-id="2">_</td>
+        </tr>
+    </table>
+
+    <h3 class="centered-text" id="playerMark"></h3>
+    <h3 class="centered-text" id="turnNotification"></h3>
+    <h2 class="centered-text" id="gameResult"></h2>
+</div>
+
+<form id="formOneMoreTime" style="display: none;">
+    <input type="submit" value="One more time">
+</form>
+
+</body>
+</html>
