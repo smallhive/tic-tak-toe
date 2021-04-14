@@ -79,10 +79,9 @@ func serveWs(h *network.Hub, q *game.Queue, redisClient *redis.Client, w http.Re
 	var id = strconv.FormatInt(time.Now().UnixNano(), 16)
 
 	log.Println("user connected", id)
-	var proxyConfig = network.NewPlayerProxyConfig(id)
 
-	var playerPubSub = redisClient.Subscribe(ctx, proxyConfig.UserChanName)
-	var controlPubSub = redisClient.Subscribe(ctx, proxyConfig.ControlChanName)
+	var playerPubSub = redisClient.Subscribe(ctx, network.PlayerProxyChanName(id))
+	var controlPubSub = redisClient.Subscribe(ctx, network.PlayerProxyCommandChanName(id))
 
 	var cl = closer.NewCloser()
 	client := network.NewClient(id, h, conn, redisClient, playerPubSub, controlPubSub, cl)

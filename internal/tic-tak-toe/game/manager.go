@@ -7,6 +7,7 @@ import (
 
 type SessionCompleteChan chan *Session
 
+// Manager controls game sessions
 type Manager struct {
 	worldCounter int64
 

@@ -46,7 +46,7 @@ type Client struct {
 	control *redis.PubSub
 
 	redis   *redis.Client
-	handler Handler
+	handler Proxy
 
 	closer *closer.Closer
 }
@@ -108,7 +108,7 @@ func (c *Client) ReadPump() {
 			fmt.Println(err)
 		} else {
 			e.UserID = c.id
-			if err := c.handler.Handle(context.Background(), &e); err != nil {
+			if err := c.handler.Send(context.Background(), &e); err != nil {
 				fmt.Println(err)
 			}
 		}
@@ -191,17 +191,16 @@ func (c *Client) handleControl(e *event.Event) error {
 
 	case event.TypeControlGameStared:
 		m, _ := json.Marshal(e.Data)
-		var started event.ControlGameStarted
-		if err := json.Unmarshal(m, &started); err != nil {
+		var startedEvent event.ControlGameStarted
+		if err := json.Unmarshal(m, &startedEvent); err != nil {
 			return err
 		}
 
-		var cfg = NewGameProxyConfig(started.ID)
-		var h = NewGameHandler(c.redis, cfg)
+		var h = NewProxy(c.redis, GameProxyChanName(startedEvent.ID))
 		c.handler = h
 
 		c.closer.Add(func() error {
-			return h.Handle(context.Background(), event.NewUnexpectedDisconnect(c.id))
+			return h.Send(context.Background(), event.NewUnexpectedDisconnect(c.id))
 		})
 	}
 

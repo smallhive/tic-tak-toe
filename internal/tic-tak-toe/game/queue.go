@@ -54,17 +54,20 @@ func (q *Queue) StartGame(ctx context.Context) error {
 	for _, id := range ids {
 		q.redis.SRem(ctx, q.setName, id)
 
-		var cfg = network.NewPlayerProxyConfig(id)
-		var proxy = NewPlayerProxy(q.redis, cfg)
-		var p = player.NewPlayer(id, session.UserMark(), proxy)
+		var p = player.NewPlayer(
+			id,
+			session.UserMark(),
+			network.NewProxy(q.redis, network.PlayerProxyChanName(id)),
+			network.NewProxy(q.redis, network.PlayerProxyCommandChanName(id)),
+		)
 
 		session.AddPlayer(p)
 	}
 
-	var proxyConfig = network.NewGameProxyConfig(session.id)
-	var pubSub = q.redis.Subscribe(ctx, proxyConfig.ChanName)
+	var proxyChanName = network.GameProxyChanName(session.id)
+	var pubSub = q.redis.Subscribe(ctx, proxyChanName)
 
-	fmt.Println("Sub", proxyConfig.ChanName)
+	fmt.Println("Sub", proxyChanName)
 	session.Start(pubSub.Channel())
 
 	return nil
