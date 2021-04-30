@@ -8,8 +8,12 @@ const TypeFieldUpdate = 7
 const TypeGameEnded = 8
 const TypeGameFailed = 9
 const TypeOpponentUnexpectedDisconnect = 11
+const TypeSetNick = 12
+const TypeSetOpponentNick = 13
 
 let playerMark = undefined;
+let playerNick = undefined;
+
 let conn = undefined;
 
 let turnNotificationCell = undefined;
@@ -34,6 +38,13 @@ function ready() {
         return;
     }
 
+    while (true) {
+        playerNick = prompt("You should provide you nick. Min 3 symbols");
+        if (playerNick.length >= 3) {
+            break;
+        }
+    }
+
     conn = new WebSocket("ws://" + document.location.host + "/ws");
     conn.onclose = function (evt) {
         console.log('Connection closed.');
@@ -45,9 +56,10 @@ function ready() {
     };
 
     conn.onopen = function (evt) {
+        setPlayerNick(playerNick);
+
         turnNotificationCell = document.getElementById('turnNotification');
         gameResult = document.getElementById('gameResult');
-
         gameResult.innerHTML = 'We are waiting for opponent';
     }
 }
@@ -63,6 +75,7 @@ function handleEvent(e) {
             break;
         case TypeGameStarted:
             gameResult.innerHTML = '';
+            sendPlayerNickUpdate(playerNick);
             subscribeCellHandlers();
             break;
         case TypeYouTurn:
@@ -112,6 +125,9 @@ function handleEvent(e) {
             gameResult.innerHTML = 'Opponent has left. You win!';
             unSubscribeCellHandlers();
             break;
+        case TypeSetOpponentNick:
+            setOpponentNick(e.data.Nick);
+            break;
     }
 }
 
@@ -130,4 +146,24 @@ const clickHandler = function (event) {
     }
 
     conn.send(JSON.stringify(click));
+}
+
+function setPlayerNick(nick) {
+    let label = document.getElementById('playerNick');
+    label.innerHTML = nick;
+}
+
+function sendPlayerNickUpdate(nick) {
+    let cmd = {
+        "type": TypeSetNick,
+        "data": {
+            "Nick": nick,
+        }
+    }
+    conn.send(JSON.stringify(cmd));
+}
+
+function setOpponentNick(nick) {
+    let label = document.getElementById('opponentNick');
+    label.innerHTML = nick;
 }

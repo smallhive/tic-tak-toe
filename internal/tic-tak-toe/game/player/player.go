@@ -11,6 +11,7 @@ import (
 type Player struct {
 	ID           string `json:"id"`
 	Label        string `json:"label"`
+	Nick         string `json:"nick"`
 	IsUserStep   bool   `json:"-"`
 	proxy        network.Proxy
 	proxyControl network.Proxy

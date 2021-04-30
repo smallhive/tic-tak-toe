@@ -20,6 +20,9 @@ const (
 
 	// TypeOpponentUnexpectedDisconnect will be send to Second player if first quit
 	TypeOpponentUnexpectedDisconnect = 11
+
+	TypeSetNick         = 12
+	TypeSetOpponentNick = 13
 )
 
 type NoBody struct {
@@ -127,5 +130,23 @@ func NewOpponentUnexpectedDisconnect() *Event {
 	return &Event{
 		Type: TypeOpponentUnexpectedDisconnect,
 		Data: &NoBody{},
+	}
+}
+
+type Nick struct {
+	Nick string
+}
+
+func NewSetNick(nick string) *Event {
+	return &Event{
+		Type: TypeSetNick,
+		Data: &Nick{Nick: nick},
+	}
+}
+
+func NewTypeSetOpponentNick(nick string) *Event {
+	return &Event{
+		Type: TypeSetOpponentNick,
+		Data: &Nick{Nick: nick},
 	}
 }

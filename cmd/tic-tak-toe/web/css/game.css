@@ -10,9 +10,36 @@
     color: indianred;
 }
 
-.field {
+.panels-layout {
+    display: flex;
+    margin: auto;
+}
+
+.player-nick {
+    font-size: 3rem;
+    text-align: center;
+    margin-top: 50px;
+    margin-bottom: 50px;
+}
+
+.vs-label {
+    font-size: 2rem;
+    text-align: center;
+}
+
+.players-panel {
+    margin: auto;
+    height: 500px;
+}
+
+.field-panel {
     margin: auto;
     width: 500px;
+    height: 500px;
+}
+
+.log-panel {
+    margin: auto;
     height: 500px;
 }
 

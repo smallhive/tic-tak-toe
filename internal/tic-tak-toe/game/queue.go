@@ -64,10 +64,10 @@ func (q *Queue) StartGame(ctx context.Context) error {
 		session.AddPlayer(p)
 	}
 
-	var proxyChanName = network.GameProxyChanName(session.id)
-	var pubSub = q.redis.Subscribe(ctx, proxyChanName)
+	var gameProxyChanName = network.GameProxyChanName(session.id)
+	var pubSub = q.redis.Subscribe(ctx, gameProxyChanName)
 
-	fmt.Println("Sub", proxyChanName)
+	fmt.Println("Sub", gameProxyChanName)
 	session.Start(pubSub.Channel())
 
 	return nil

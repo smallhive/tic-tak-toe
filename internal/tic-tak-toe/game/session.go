@@ -130,6 +130,14 @@ func (s *Session) Handle(e *event.Event) error {
 		return s.stepHandler(e.UserID, &eventStep)
 	case event.TypeUnexpectedDisconnect:
 		return s.unexpectedDisconnectHandler(e.UserID)
+	case event.TypeSetNick:
+		m, _ := json.Marshal(e.Data)
+		var setNick event.Nick
+		if err := json.Unmarshal(m, &setNick); err != nil {
+			return err
+		}
+
+		return s.setNickHandler(e.UserID, setNick)
 	}
 
 	return nil

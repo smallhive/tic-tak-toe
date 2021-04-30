@@ -6,32 +6,44 @@
     <link rel="stylesheet" href="/css/game.css">
 </head>
 <body>
+
 <script>
     document.addEventListener("DOMContentLoaded", ready);
 </script>
 
-<div class="field">
-    <table class="game-field">
-        <tr>
-            <td class="game-cell" id="cell_0_0" data-row-id="0" data-coll-id="0">_</td>
-            <td class="game-cell" id="cell_0_1" data-row-id="0" data-coll-id="1">_</td>
-            <td class="game-cell" id="cell_0_2" data-row-id="0" data-coll-id="2">_</td>
-        </tr>
-        <tr>
-            <td class="game-cell" id="cell_1_0" data-row-id="1" data-coll-id="0">_</td>
-            <td class="game-cell" id="cell_1_1" data-row-id="1" data-coll-id="1">_</td>
-            <td class="game-cell" id="cell_1_2" data-row-id="1" data-coll-id="2">_</td>
-        </tr>
-        <tr>
-            <td class="game-cell" id="cell_2_0" data-row-id="2" data-coll-id="0">_</td>
-            <td class="game-cell" id="cell_2_1" data-row-id="2" data-coll-id="1">_</td>
-            <td class="game-cell" id="cell_2_2" data-row-id="2" data-coll-id="2">_</td>
-        </tr>
-    </table>
+<div class="panels-layout">
+    <div class="players-panel">
+        <div id="playerNick" class="player-nick you-step"></div>
+        <div class="vs-label">VS</div>
+        <div id="opponentNick" class="player-nick opponent-step"></div>
+    </div>
 
-    <h3 class="centered-text" id="playerMark"></h3>
-    <h3 class="centered-text" id="turnNotification"></h3>
-    <h2 class="centered-text" id="gameResult"></h2>
+    <div class="field-panel">
+        <table class="game-field">
+            <tr>
+                <td class="game-cell" id="cell_0_0" data-row-id="0" data-coll-id="0">_</td>
+                <td class="game-cell" id="cell_0_1" data-row-id="0" data-coll-id="1">_</td>
+                <td class="game-cell" id="cell_0_2" data-row-id="0" data-coll-id="2">_</td>
+            </tr>
+            <tr>
+                <td class="game-cell" id="cell_1_0" data-row-id="1" data-coll-id="0">_</td>
+                <td class="game-cell" id="cell_1_1" data-row-id="1" data-coll-id="1">_</td>
+                <td class="game-cell" id="cell_1_2" data-row-id="1" data-coll-id="2">_</td>
+            </tr>
+            <tr>
+                <td class="game-cell" id="cell_2_0" data-row-id="2" data-coll-id="0">_</td>
+                <td class="game-cell" id="cell_2_1" data-row-id="2" data-coll-id="1">_</td>
+                <td class="game-cell" id="cell_2_2" data-row-id="2" data-coll-id="2">_</td>
+            </tr>
+        </table>
+
+        <h3 class="centered-text" id="playerMark"></h3>
+        <h3 class="centered-text" id="turnNotification"></h3>
+        <h2 class="centered-text" id="gameResult"></h2>
+    </div>
+
+    <div class="log-panel">
+    </div>
 </div>
 
 <form id="formOneMoreTime" style="display: none;">
