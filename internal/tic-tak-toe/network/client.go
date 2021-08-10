@@ -95,8 +95,6 @@ func (c *Client) ReadPump() {
 			}
 			break
 		}
-		// message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		// c.hub.broadcast <- message
 
 		if c.handler == nil {
 			fmt.Println("logic handler isn't set for client", c.id)
@@ -144,13 +142,6 @@ func (c *Client) WritePump() {
 			}
 			w.Write(message)
 
-			// Add queued chat messages to the current websocket message.
-			// n := len(c.send)
-			// for i := 0; i < n; i++ {
-			// 	w.Write(newline)
-			// 	w.Write(<-c.send)
-			// }
-
 			if err := w.Close(); err != nil {
 				return
 			}
@@ -189,9 +180,9 @@ func (c *Client) handleControl(e *event.Event) error {
 	case event.TypeControlDisconnect:
 		c.hub.unregister <- c
 
-	case event.TypeControlGameStared:
+	case event.TypeControlLinkGameHandler:
 		m, _ := json.Marshal(e.Data)
-		var startedEvent event.ControlGameStarted
+		var startedEvent event.ControlLinkGameHandler
 		if err := json.Unmarshal(m, &startedEvent); err != nil {
 			return err
 		}

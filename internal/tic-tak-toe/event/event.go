@@ -23,13 +23,16 @@ const (
 
 	TypeSetNick         = 12
 	TypeSetOpponentNick = 13
+
+	TypeAreYouReady = 14
+	TypeIamReady    = 15
 )
 
 type NoBody struct {
 }
 
 type Event struct {
-	UserID string      `json:"id"`
+	UserID string      `json:"id,omitempty"`
 	Type   int         `json:"type"`
 	Data   interface{} `json:"data"`
 }
@@ -148,5 +151,23 @@ func NewTypeSetOpponentNick(nick string) *Event {
 	return &Event{
 		Type: TypeSetOpponentNick,
 		Data: &Nick{Nick: nick},
+	}
+}
+
+type AreYouReady struct {
+	ID string
+}
+
+func NewAreYouReady(id string) *Event {
+	return &Event{
+		Type: TypeAreYouReady,
+		Data: &AreYouReady{ID: id},
+	}
+}
+
+func NewIamReady() *Event {
+	return &Event{
+		Type: TypeIamReady,
+		Data: &NoBody{},
 	}
 }

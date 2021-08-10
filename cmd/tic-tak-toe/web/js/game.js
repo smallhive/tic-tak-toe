@@ -10,6 +10,8 @@ const TypeGameFailed = 9
 const TypeOpponentUnexpectedDisconnect = 11
 const TypeSetNick = 12
 const TypeSetOpponentNick = 13
+const TypeAreYouReady = 14
+const TypeIamReady = 15
 
 let playerMark = undefined;
 let playerNick = undefined;
@@ -128,6 +130,9 @@ function handleEvent(e) {
         case TypeSetOpponentNick:
             setOpponentNick(e.data.Nick);
             break;
+        case TypeAreYouReady:
+            sendIamReady();
+            break;
     }
 }
 
@@ -162,6 +167,15 @@ function sendPlayerNickUpdate(nick) {
     }
     conn.send(JSON.stringify(cmd));
 }
+
+function sendIamReady() {
+    let cmd = {
+        "type": TypeIamReady,
+        "data": {}
+    }
+    conn.send(JSON.stringify(cmd));
+}
+
 
 function setOpponentNick(nick) {
     let label = document.getElementById('opponentNick');

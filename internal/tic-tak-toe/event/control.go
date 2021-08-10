@@ -1,8 +1,8 @@
 package event
 
 const (
-	TypeControlDisconnect = 1000
-	TypeControlGameStared = 1001
+	TypeControlDisconnect      = 1000
+	TypeControlLinkGameHandler = 1001
 )
 
 func NewControlDisconnect() *Event {
@@ -12,13 +12,13 @@ func NewControlDisconnect() *Event {
 	}
 }
 
-type ControlGameStarted struct {
+type ControlLinkGameHandler struct {
 	ID string
 }
 
-func NewControlGameStarted(id string) *Event {
+func NewControlLinkGameHandler(id string) *Event {
 	return &Event{
-		Type: TypeControlGameStared,
-		Data: &ControlGameStarted{ID: id},
+		Type: TypeControlLinkGameHandler,
+		Data: &ControlLinkGameHandler{ID: id},
 	}
 }

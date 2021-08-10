@@ -43,15 +43,20 @@ type Session struct {
 	players     map[string]*player.Player
 	stepCounter int
 	cmdChan     <-chan *redis.Message
+
+	referee *referee
 }
 
 func NewSession(completeChan SessionCompleteChan) *Session {
+	com := make(chan struct{}, 2)
+
 	return &Session{
 		completeChan: completeChan,
 		id:           strconv.FormatInt(time.Now().UnixNano(), 16),
 		field:        [3][3]string{{MarkEmpty, MarkEmpty, MarkEmpty}, {MarkEmpty, MarkEmpty, MarkEmpty}, {MarkEmpty, MarkEmpty, MarkEmpty}},
 		players:      make(map[string]*player.Player),
 		stepCounter:  0,
+		referee:      newReferee(2, com),
 	}
 }
 
@@ -76,16 +81,22 @@ func (s *Session) UserMark() string {
 
 func (s *Session) AddPlayer(p *player.Player) *player.Player {
 	s.players[p.ID] = p
-
 	return p
 }
 
 func (s *Session) Start(cmdChan <-chan *redis.Message) {
+	s.cmdChan = cmdChan
+
+	go s.gameLoop()
+
+	if err := s.readiness(); err != nil {
+		return
+	}
+
 	isFirst := true
 	fmt.Println("GameStarting", s.id)
 	for _, p := range s.players {
 		p.Send(context.Background(), event.NewGameStared(isFirst, s.id))
-		p.SendControl(context.Background(), event.NewControlGameStarted(s.id))
 
 		if isFirst {
 			p.IsUserStep = true
@@ -96,26 +107,44 @@ func (s *Session) Start(cmdChan <-chan *redis.Message) {
 
 		isFirst = false
 	}
+}
 
-	s.cmdChan = cmdChan
+func (s *Session) gameLoop() {
+	for {
+		message, ok := <-s.cmdChan
+		if !ok {
+			break
+		}
 
-	go func() {
-		for {
-			message, ok := <-s.cmdChan
-			if !ok {
-				break
-			}
-
-			var e event.Event
-			if err := json.Unmarshal([]byte(message.Payload), &e); err != nil {
+		var e event.Event
+		if err := json.Unmarshal([]byte(message.Payload), &e); err != nil {
+			fmt.Println(err)
+		} else {
+			if err = s.Handle(&e); err != nil {
 				fmt.Println(err)
-			} else {
-				if err = s.Handle(&e); err != nil {
-					fmt.Println(err)
-				}
 			}
 		}
-	}()
+	}
+}
+
+func (s *Session) readiness() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	for _, p := range s.players {
+		p.SendControl(context.Background(), event.NewControlLinkGameHandler(s.id))
+		p.Send(ctx, event.NewAreYouReady(s.id))
+	}
+
+	if err := s.referee.Wait(ctx); err != nil {
+		for _, p := range s.players {
+			s.unexpectedDisconnectHandler(p.ID)
+		}
+
+		return err
+	}
+
+	return nil
 }
 
 func (s *Session) Handle(e *event.Event) error {
@@ -138,6 +167,8 @@ func (s *Session) Handle(e *event.Event) error {
 		}
 
 		return s.setNickHandler(e.UserID, setNick)
+	case event.TypeIamReady:
+		s.referee.Chan() <- struct{}{}
 	}
 
 	return nil
