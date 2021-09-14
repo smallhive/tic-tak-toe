@@ -2,9 +2,9 @@ package game
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/smallhive/tic-tak-toe/internal/logger"
 
 	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/game/player"
 	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/network"
@@ -67,7 +67,7 @@ func (q *Queue) StartGame(ctx context.Context) error {
 	var gameProxyChanName = network.GameProxyChanName(session.id)
 	var pubSub = q.redis.Subscribe(ctx, gameProxyChanName)
 
-	fmt.Println("Sub", gameProxyChanName)
+	logger.Warn(ctx, "Sub", gameProxyChanName)
 	session.Start(pubSub.Channel())
 
 	return nil

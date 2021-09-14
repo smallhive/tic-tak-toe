@@ -3,11 +3,11 @@ package game
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/smallhive/tic-tak-toe/internal/logger"
 
 	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/event"
 	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/game/player"
@@ -86,30 +86,37 @@ func (s *Session) AddPlayer(p *player.Player) *player.Player {
 
 func (s *Session) Start(cmdChan <-chan *redis.Message) {
 	s.cmdChan = cmdChan
+	ctx := context.Background()
 
-	go s.gameLoop()
+	go s.gameLoop(ctx)
 
 	if err := s.readiness(); err != nil {
 		return
 	}
 
 	isFirst := true
-	fmt.Println("GameStarting", s.id)
+	logger.Info(ctx, "GameStarting", s.id)
 	for _, p := range s.players {
-		p.Send(context.Background(), event.NewGameStared(isFirst, s.id))
+		if err := p.Send(ctx, event.NewGameStared(isFirst, s.id)); err != nil {
+			logger.Error(ctx, err)
+		}
 
 		if isFirst {
 			p.IsUserStep = true
-			p.Send(context.Background(), event.NewYouTurn())
+			if err := p.Send(ctx, event.NewYouTurn()); err != nil {
+				logger.Error(ctx, err)
+			}
 		} else {
-			p.Send(context.Background(), event.NewNotYouTurn())
+			if err := p.Send(ctx, event.NewNotYouTurn()); err != nil {
+				logger.Error(ctx, err)
+			}
 		}
 
 		isFirst = false
 	}
 }
 
-func (s *Session) gameLoop() {
+func (s *Session) gameLoop(ctx context.Context) {
 	for {
 		message, ok := <-s.cmdChan
 		if !ok {
@@ -118,10 +125,10 @@ func (s *Session) gameLoop() {
 
 		var e event.Event
 		if err := json.Unmarshal([]byte(message.Payload), &e); err != nil {
-			fmt.Println(err)
+			logger.Error(ctx, err)
 		} else {
 			if err = s.Handle(&e); err != nil {
-				fmt.Println(err)
+				logger.Error(ctx, err)
 			}
 		}
 	}

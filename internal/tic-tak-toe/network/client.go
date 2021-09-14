@@ -3,13 +3,12 @@ package network
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"log"
 	"time"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/websocket"
 
+	"github.com/smallhive/tic-tak-toe/internal/logger"
 	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/closer"
 	"github.com/smallhive/tic-tak-toe/internal/tic-tak-toe/event"
 )
@@ -87,27 +86,29 @@ func (c *Client) ReadPump() {
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 
+	ctx := context.Background()
+
 	for {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("error: %v", err)
+				logger.Errorf(ctx, "error: %v", err)
 			}
 			break
 		}
 
 		if c.handler == nil {
-			fmt.Println("logic handler isn't set for client", c.id)
+			logger.Errorf(ctx, "logic handler isn't set for client", c.id)
 			continue
 		}
 
 		var e event.Event
 		if err := json.Unmarshal(message, &e); err != nil {
-			fmt.Println(err)
+			logger.Error(ctx, err)
 		} else {
 			e.UserID = c.id
-			if err := c.handler.Send(context.Background(), &e); err != nil {
-				fmt.Println(err)
+			if err := c.handler.Send(ctx, &e); err != nil {
+				logger.Error(ctx, err)
 			}
 		}
 	}
@@ -120,6 +121,7 @@ func (c *Client) ReadPump() {
 // executing all writes from this goroutine.
 func (c *Client) WritePump() {
 	ticker := time.NewTicker(pingPeriod)
+	ctx := context.Background()
 
 	defer func() {
 		ticker.Stop()
@@ -157,19 +159,20 @@ func (c *Client) WritePump() {
 				c.hub.unregister <- c
 			} else {
 				c.send <- []byte(message.Payload)
-				// fmt.Println(message.Payload)
 			}
 
 		case message, ok := <-c.control.Channel():
 			if !ok {
-				fmt.Println("control chan closed")
+				logger.Error(ctx, "control chan closed")
 				continue
 			}
 			var e event.Event
 			if err := json.Unmarshal([]byte(message.Payload), &e); err != nil {
-				fmt.Println(err)
+				logger.Error(ctx, err)
 			} else {
-				c.handleControl(&e)
+				if err := c.handleControl(&e); err != nil {
+					logger.Error(ctx, err)
+				}
 			}
 		}
 	}
@@ -198,6 +201,6 @@ func (c *Client) handleControl(e *event.Event) error {
 	return nil
 }
 
-func (c *Client) Close() {
-	c.closer.Close()
+func (c *Client) Close(ctx context.Context) {
+	c.closer.Close(ctx)
 }

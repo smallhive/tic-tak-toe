@@ -1,8 +1,10 @@
 package game
 
 import (
-	"fmt"
+	"context"
 	"sync"
+
+	"github.com/smallhive/tic-tak-toe/internal/logger"
 )
 
 type SessionCompleteChan chan *Session
@@ -47,7 +49,7 @@ func (m *Manager) sessionCloser() {
 			break
 		}
 
-		fmt.Println("Session", session.ID(), "completed")
+		logger.Info(context.Background(), "Session", session.ID(), "completed")
 
 		m.mutex.Lock()
 		delete(m.sessions, session.ID())

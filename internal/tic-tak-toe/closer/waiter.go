@@ -1,8 +1,10 @@
 package closer
 
 import (
-	"fmt"
+	"context"
 	"sync"
+
+	"github.com/smallhive/tic-tak-toe/internal/logger"
 )
 
 type CloseFunc func() error
@@ -26,7 +28,7 @@ func (w *Closer) Add(c CloseFunc) {
 	w.m.Unlock()
 }
 
-func (w *Closer) Close() {
+func (w *Closer) Close(ctx context.Context) {
 	w.m.Lock()
 	closers := w.closers
 	w.closers = nil
@@ -35,7 +37,7 @@ func (w *Closer) Close() {
 	w.once.Do(func() {
 		for _, c := range closers {
 			if err := c(); err != nil {
-				fmt.Println(err)
+				logger.Error(ctx, err)
 			}
 		}
 	})

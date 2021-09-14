@@ -1,5 +1,9 @@
 package network
 
+import (
+	"context"
+)
+
 // Hub maintains the set of active clients and broadcasts messages to the
 // clients.
 type Hub struct {
@@ -35,7 +39,7 @@ func (h *Hub) Run() {
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
 				close(client.send)
-				client.Close()
+				client.Close(context.Background())
 			}
 
 		case message := <-h.broadcast:
@@ -45,7 +49,7 @@ func (h *Hub) Run() {
 				default:
 					close(client.send)
 					delete(h.clients, client)
-					client.Close()
+					client.Close(context.Background())
 				}
 			}
 		}
